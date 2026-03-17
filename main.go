@@ -79,6 +79,8 @@ func main() {
 	api.Get("/projects/:id/sub-projects", handlers.ListSubProjects)
 
 	// Tasks
+	api.Get("/tasks", handlers.ListAllTasks)
+	api.Post("/tasks", handlers.CreateTaskFlat)
 	api.Get("/projects/:projectId/tasks", handlers.ListTasks)
 	api.Post("/projects/:projectId/tasks", handlers.CreateTask)
 	api.Put("/tasks/:id", handlers.UpdateTask)

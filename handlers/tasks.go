@@ -183,3 +183,77 @@ func ClaimTask(c *fiber.Ctx) error {
 	logActivity(c, "claim", "task", id.Hex(), "Claimed task")
 	return c.JSON(task)
 }
+
+// ListAllTasks returns all tasks, optionally filtered by projectId query param.
+func ListAllTasks(c *fiber.Ctx) error {
+	page, limit := parsePagination(c)
+	skip := int64((page - 1) * limit)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	coll := db.Collection("tasks")
+	filter := bson.M{}
+
+	// Optional projectId filter
+	if pid := c.Query("projectId"); pid != "" {
+		oid, err := primitive.ObjectIDFromHex(pid)
+		if err == nil {
+			filter["projectId"] = oid
+		}
+	}
+
+	total, err := coll.CountDocuments(ctx, filter)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to count tasks", "code": 500})
+	}
+
+	opts := options.Find().SetSkip(skip).SetLimit(int64(limit)).SetSort(bson.D{{Key: "createdAt", Value: -1}})
+	cursor, err := coll.Find(ctx, filter, opts)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch tasks", "code": 500})
+	}
+	defer cursor.Close(ctx)
+
+	var tasks []models.Task
+	if err := cursor.All(ctx, &tasks); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to decode tasks", "code": 500})
+	}
+
+	if tasks == nil {
+		tasks = []models.Task{}
+	}
+
+	return c.JSON(fiber.Map{
+		"data":       tasks,
+		"total":      total,
+		"page":       page,
+		"limit":      limit,
+		"totalPages": int(math.Ceil(float64(total) / float64(limit))),
+	})
+}
+
+// CreateTaskFlat creates a task with projectId in the body instead of URL param.
+func CreateTaskFlat(c *fiber.Ctx) error {
+	var task models.Task
+	if err := c.BodyParser(&task); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body", "code": 400})
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	task.ID = primitive.NewObjectID()
+	task.CreatedAt = time.Now()
+	task.UpdatedAt = time.Now()
+	if task.Status == "" {
+		task.Status = "todo"
+	}
+
+	coll := db.Collection("tasks")
+	if _, err := coll.InsertOne(ctx, task); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create task", "code": 500})
+	}
+
+	return c.Status(201).JSON(task)
+}

@@ -9,7 +9,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var client *mongo.Client
+var (
+	client *mongo.Client
+	dbName = "nyx"
+)
+
+func SetDBName(name string) {
+	dbName = name
+}
 
 func Connect(uri string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -34,7 +41,7 @@ func GetClient() *mongo.Client {
 }
 
 func Collection(name string) *mongo.Collection {
-	return client.Database("erebus").Collection(name)
+	return client.Database(dbName).Collection(name)
 }
 
 func Disconnect() {

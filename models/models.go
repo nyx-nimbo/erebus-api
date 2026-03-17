@@ -37,24 +37,32 @@ type BusinessUnit struct {
 	UpdatedAt string `json:"updatedAt" bson:"updatedAt"`
 }
 
+// PortEntry represents a port binding for a project.
+type PortEntry struct {
+	Port     int    `json:"port" bson:"port"`
+	Service  string `json:"service" bson:"service"`
+	Protocol string `json:"protocol" bson:"protocol"`
+}
+
 // Project represents a project or project group.
 type Project struct {
-	ID             string   `json:"id" bson:"_id,omitempty"`
-	Name           string   `json:"name" bson:"name"`
-	Description    string   `json:"description,omitempty" bson:"description,omitempty"`
-	ClientID       string   `json:"clientId,omitempty" bson:"clientId,omitempty"`
-	BusinessUnitID string   `json:"businessUnitId,omitempty" bson:"businessUnitId,omitempty"`
-	ParentID       string   `json:"parentId,omitempty" bson:"parentId,omitempty"`
-	IsGroup        bool     `json:"isGroup" bson:"isGroup"`
-	Status         string   `json:"status" bson:"status"`
-	Stack          string   `json:"stack,omitempty" bson:"stack,omitempty"`
-	RepoURL        string   `json:"repoUrl,omitempty" bson:"repoUrl,omitempty"`
-	Priority       string   `json:"priority,omitempty" bson:"priority,omitempty"`
-	Tags           []string `json:"tags,omitempty" bson:"tags,omitempty"`
-	StartDate      string   `json:"startDate,omitempty" bson:"startDate,omitempty"`
-	DueDate        string   `json:"dueDate,omitempty" bson:"dueDate,omitempty"`
-	CreatedAt      string   `json:"createdAt" bson:"createdAt"`
-	UpdatedAt      string   `json:"updatedAt" bson:"updatedAt"`
+	ID             string      `json:"id" bson:"_id,omitempty"`
+	Name           string      `json:"name" bson:"name"`
+	Description    string      `json:"description,omitempty" bson:"description,omitempty"`
+	ClientID       string      `json:"clientId,omitempty" bson:"clientId,omitempty"`
+	BusinessUnitID string      `json:"businessUnitId,omitempty" bson:"businessUnitId,omitempty"`
+	ParentID       string      `json:"parentId,omitempty" bson:"parentId,omitempty"`
+	IsGroup        bool        `json:"isGroup" bson:"isGroup"`
+	Status         string      `json:"status" bson:"status"`
+	Stack          string      `json:"stack,omitempty" bson:"stack,omitempty"`
+	RepoURL        string      `json:"repoUrl,omitempty" bson:"repoUrl,omitempty"`
+	Ports          []PortEntry `json:"ports,omitempty" bson:"ports,omitempty"`
+	Priority       string      `json:"priority,omitempty" bson:"priority,omitempty"`
+	Tags           []string    `json:"tags,omitempty" bson:"tags,omitempty"`
+	StartDate      string      `json:"startDate,omitempty" bson:"startDate,omitempty"`
+	DueDate        string      `json:"dueDate,omitempty" bson:"dueDate,omitempty"`
+	CreatedAt      string      `json:"createdAt" bson:"createdAt"`
+	UpdatedAt      string      `json:"updatedAt" bson:"updatedAt"`
 }
 
 // Task represents a task within a project.

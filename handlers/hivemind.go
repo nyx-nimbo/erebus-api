@@ -98,17 +98,14 @@ func KnowledgeSearch(c *fiber.Ctx) error {
 }
 
 // logActivity records an activity entry (used by other handlers).
-func logActivity(c *fiber.Ctx, action, entity, entityID, details string) {
-	email, _ := c.Locals("email").(string)
-
+func logActivity(c *fiber.Ctx, action, entityType, entityID, summary string) {
 	entry := models.ActivityEntry{
-		ID:        primitive.NewObjectID(),
-		Action:    action,
-		Entity:    entity,
-		EntityID:  entityID,
-		Details:   details,
-		User:      email,
-		CreatedAt: time.Now(),
+		ID:         primitive.NewObjectID().Hex(),
+		Action:     action,
+		EntityType: entityType,
+		EntityID:   entityID,
+		Summary:    summary,
+		CreatedAt:  time.Now().Format(time.RFC3339),
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

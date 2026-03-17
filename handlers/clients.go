@@ -63,9 +63,9 @@ func CreateClient(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Name is required", "code": 400})
 	}
 
-	client.ID = primitive.NewObjectID()
-	client.CreatedAt = time.Now()
-	client.UpdatedAt = time.Now()
+	client.ID = primitive.NewObjectID().Hex()
+	client.CreatedAt = time.Now().Format(time.RFC3339)
+	client.UpdatedAt = time.Now().Format(time.RFC3339)
 	if client.Status == "" {
 		client.Status = "active"
 	}
@@ -78,22 +78,19 @@ func CreateClient(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create client", "code": 500})
 	}
 
-	logActivity(c, "create", "client", client.ID.Hex(), "Created client: "+client.Name)
+	logActivity(c, "create", "client", client.ID, "Created client: "+client.Name)
 	return c.Status(201).JSON(client)
 }
 
 // GetClient returns a single client by ID.
 func GetClient(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	var client models.Client
-	err = db.Collection("clients").FindOne(ctx, bson.M{"_id": id}).Decode(&client)
+	err := db.Collection("clients").FindOne(ctx, bson.M{"_id": id}).Decode(&client)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Client not found", "code": 404})
 	}
@@ -103,10 +100,7 @@ func GetClient(c *fiber.Ctx) error {
 
 // UpdateClient updates a client by ID.
 func UpdateClient(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	var updates bson.M
 	if err := c.BodyParser(&updates); err != nil {
@@ -116,7 +110,7 @@ func UpdateClient(c *fiber.Ctx) error {
 	delete(updates, "_id")
 	delete(updates, "id")
 	delete(updates, "createdAt")
-	updates["updatedAt"] = time.Now()
+	updates["updatedAt"] = time.Now().Format(time.RFC3339)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -132,16 +126,13 @@ func UpdateClient(c *fiber.Ctx) error {
 	var client models.Client
 	db.Collection("clients").FindOne(ctx, bson.M{"_id": id}).Decode(&client)
 
-	logActivity(c, "update", "client", id.Hex(), "Updated client")
+	logActivity(c, "update", "client", id, "Updated client")
 	return c.JSON(client)
 }
 
 // DeleteClient deletes a client by ID.
 func DeleteClient(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -157,16 +148,13 @@ func DeleteClient(c *fiber.Ctx) error {
 	// Also delete associated business units
 	db.Collection("business_units").DeleteMany(ctx, bson.M{"clientId": id})
 
-	logActivity(c, "delete", "client", id.Hex(), "Deleted client")
+	logActivity(c, "delete", "client", id, "Deleted client")
 	return c.JSON(fiber.Map{"message": "Client deleted"})
 }
 
 // ListBusinessUnits returns business units for a client.
 func ListBusinessUnits(c *fiber.Ctx) error {
-	clientID, err := primitive.ObjectIDFromHex(c.Params("clientId"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid client ID", "code": 400})
-	}
+	clientID := c.Params("clientId")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -191,10 +179,7 @@ func ListBusinessUnits(c *fiber.Ctx) error {
 
 // CreateBusinessUnit creates a business unit under a client.
 func CreateBusinessUnit(c *fiber.Ctx) error {
-	clientID, err := primitive.ObjectIDFromHex(c.Params("clientId"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid client ID", "code": 400})
-	}
+	clientID := c.Params("clientId")
 
 	var unit models.BusinessUnit
 	if err := c.BodyParser(&unit); err != nil {
@@ -204,29 +189,26 @@ func CreateBusinessUnit(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Name is required", "code": 400})
 	}
 
-	unit.ID = primitive.NewObjectID()
+	unit.ID = primitive.NewObjectID().Hex()
 	unit.ClientID = clientID
-	unit.CreatedAt = time.Now()
-	unit.UpdatedAt = time.Now()
+	unit.CreatedAt = time.Now().Format(time.RFC3339)
+	unit.UpdatedAt = time.Now().Format(time.RFC3339)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err = db.Collection("business_units").InsertOne(ctx, unit)
+	_, err := db.Collection("business_units").InsertOne(ctx, unit)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create unit", "code": 500})
 	}
 
-	logActivity(c, "create", "business_unit", unit.ID.Hex(), "Created business unit: "+unit.Name)
+	logActivity(c, "create", "business_unit", unit.ID, "Created business unit: "+unit.Name)
 	return c.Status(201).JSON(unit)
 }
 
 // UpdateBusinessUnit updates a business unit by ID.
 func UpdateBusinessUnit(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	var updates bson.M
 	if err := c.BodyParser(&updates); err != nil {
@@ -237,7 +219,7 @@ func UpdateBusinessUnit(c *fiber.Ctx) error {
 	delete(updates, "id")
 	delete(updates, "clientId")
 	delete(updates, "createdAt")
-	updates["updatedAt"] = time.Now()
+	updates["updatedAt"] = time.Now().Format(time.RFC3339)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -258,10 +240,7 @@ func UpdateBusinessUnit(c *fiber.Ctx) error {
 
 // DeleteBusinessUnit deletes a business unit by ID.
 func DeleteBusinessUnit(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

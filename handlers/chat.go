@@ -125,9 +125,9 @@ func CreateChatSession(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Session key is required", "code": 400})
 	}
 
-	session.ID = primitive.NewObjectID()
-	session.CreatedAt = time.Now()
-	session.UpdatedAt = time.Now()
+	session.ID = primitive.NewObjectID().Hex()
+	session.CreatedAt = time.Now().Format(time.RFC3339)
+	session.UpdatedAt = time.Now().Format(time.RFC3339)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

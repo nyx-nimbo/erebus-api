@@ -1,106 +1,111 @@
 package models
 
 import (
-	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // User represents an authenticated user from Google OAuth.
 type User struct {
-	ID      primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Email   string             `json:"email" bson:"email"`
-	Name    string             `json:"name" bson:"name"`
-	Picture string             `json:"picture" bson:"picture"`
+	ID      string `json:"id" bson:"_id,omitempty"`
+	Email   string `json:"email" bson:"email"`
+	Name    string `json:"name" bson:"name"`
+	Picture string `json:"picture" bson:"picture"`
 }
 
 // Client represents a client/customer.
 type Client struct {
-	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Name      string             `json:"name" bson:"name"`
-	Email     string             `json:"email,omitempty" bson:"email,omitempty"`
-	Phone     string             `json:"phone,omitempty" bson:"phone,omitempty"`
-	Company   string             `json:"company,omitempty" bson:"company,omitempty"`
-	Notes     string             `json:"notes,omitempty" bson:"notes,omitempty"`
-	Status    string             `json:"status" bson:"status"`
-	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`
-	UpdatedAt time.Time          `json:"updatedAt" bson:"updatedAt"`
+	ID           string `json:"id" bson:"_id,omitempty"`
+	Name         string `json:"name" bson:"name"`
+	ContactEmail string `json:"contactEmail,omitempty" bson:"contactEmail,omitempty"`
+	Phone        string `json:"phone,omitempty" bson:"phone,omitempty"`
+	Company      string `json:"company,omitempty" bson:"company,omitempty"`
+	Notes        string `json:"notes,omitempty" bson:"notes,omitempty"`
+	Status       string `json:"status" bson:"status"`
+	CreatedAt    string `json:"createdAt" bson:"createdAt"`
+	UpdatedAt    string `json:"updatedAt" bson:"updatedAt"`
 }
 
 // BusinessUnit represents a division within a client.
 type BusinessUnit struct {
-	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	ClientID  primitive.ObjectID `json:"clientId" bson:"clientId"`
-	Name      string             `json:"name" bson:"name"`
-	Contact   string             `json:"contact,omitempty" bson:"contact,omitempty"`
-	Email     string             `json:"email,omitempty" bson:"email,omitempty"`
-	Notes     string             `json:"notes,omitempty" bson:"notes,omitempty"`
-	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`
-	UpdatedAt time.Time          `json:"updatedAt" bson:"updatedAt"`
+	ID        string `json:"id" bson:"_id,omitempty"`
+	ClientID  string `json:"clientId" bson:"clientId"`
+	Name      string `json:"name" bson:"name"`
+	Contact   string `json:"contact,omitempty" bson:"contact,omitempty"`
+	Email     string `json:"email,omitempty" bson:"email,omitempty"`
+	Notes     string `json:"notes,omitempty" bson:"notes,omitempty"`
+	CreatedAt string `json:"createdAt" bson:"createdAt"`
+	UpdatedAt string `json:"updatedAt" bson:"updatedAt"`
 }
 
 // Project represents a project or project group.
 type Project struct {
-	ID          primitive.ObjectID  `json:"id" bson:"_id,omitempty"`
-	Name        string              `json:"name" bson:"name"`
-	Description string              `json:"description,omitempty" bson:"description,omitempty"`
-	ClientID    *primitive.ObjectID `json:"clientId,omitempty" bson:"clientId,omitempty"`
-	ParentID    *primitive.ObjectID `json:"parentId,omitempty" bson:"parentId,omitempty"`
-	IsGroup     bool                `json:"isGroup" bson:"isGroup"`
-	Status      string              `json:"status" bson:"status"`
-	Priority    string              `json:"priority,omitempty" bson:"priority,omitempty"`
-	Tags        []string            `json:"tags,omitempty" bson:"tags,omitempty"`
-	StartDate   *time.Time          `json:"startDate,omitempty" bson:"startDate,omitempty"`
-	DueDate     *time.Time          `json:"dueDate,omitempty" bson:"dueDate,omitempty"`
-	CreatedAt   time.Time           `json:"createdAt" bson:"createdAt"`
-	UpdatedAt   time.Time           `json:"updatedAt" bson:"updatedAt"`
+	ID             string   `json:"id" bson:"_id,omitempty"`
+	Name           string   `json:"name" bson:"name"`
+	Description    string   `json:"description,omitempty" bson:"description,omitempty"`
+	ClientID       string   `json:"clientId,omitempty" bson:"clientId,omitempty"`
+	BusinessUnitID string   `json:"businessUnitId,omitempty" bson:"businessUnitId,omitempty"`
+	ParentID       string   `json:"parentId,omitempty" bson:"parentId,omitempty"`
+	IsGroup        bool     `json:"isGroup" bson:"isGroup"`
+	Status         string   `json:"status" bson:"status"`
+	Stack          string   `json:"stack,omitempty" bson:"stack,omitempty"`
+	RepoURL        string   `json:"repoUrl,omitempty" bson:"repoUrl,omitempty"`
+	Priority       string   `json:"priority,omitempty" bson:"priority,omitempty"`
+	Tags           []string `json:"tags,omitempty" bson:"tags,omitempty"`
+	StartDate      string   `json:"startDate,omitempty" bson:"startDate,omitempty"`
+	DueDate        string   `json:"dueDate,omitempty" bson:"dueDate,omitempty"`
+	CreatedAt      string   `json:"createdAt" bson:"createdAt"`
+	UpdatedAt      string   `json:"updatedAt" bson:"updatedAt"`
 }
 
 // Task represents a task within a project.
 type Task struct {
-	ID          primitive.ObjectID  `json:"id" bson:"_id,omitempty"`
-	ProjectID   primitive.ObjectID  `json:"projectId" bson:"projectId"`
-	Title       string              `json:"title" bson:"title"`
-	Description string              `json:"description,omitempty" bson:"description,omitempty"`
-	Status      string              `json:"status" bson:"status"`
-	Priority    string              `json:"priority,omitempty" bson:"priority,omitempty"`
-	AssignedTo  string              `json:"assignedTo,omitempty" bson:"assignedTo,omitempty"`
-	ClaimedBy   string              `json:"claimedBy,omitempty" bson:"claimedBy,omitempty"`
-	DueDate     *time.Time          `json:"dueDate,omitempty" bson:"dueDate,omitempty"`
-	ParentID    *primitive.ObjectID `json:"parentId,omitempty" bson:"parentId,omitempty"`
-	CreatedAt   time.Time           `json:"createdAt" bson:"createdAt"`
-	UpdatedAt   time.Time           `json:"updatedAt" bson:"updatedAt"`
+	ID             string `json:"id" bson:"_id,omitempty"`
+	ProjectID      string `json:"projectId" bson:"projectId"`
+	Title          string `json:"title" bson:"title"`
+	Description    string `json:"description,omitempty" bson:"description,omitempty"`
+	Status         string `json:"status" bson:"status"`
+	Priority       string `json:"priority,omitempty" bson:"priority,omitempty"`
+	AssignedTo     string `json:"assignedTo,omitempty" bson:"assignedTo,omitempty"`
+	ClaimedBy      string `json:"claimedBy,omitempty" bson:"claimedBy,omitempty"`
+	EstimatedHours float64 `json:"estimatedHours,omitempty" bson:"estimatedHours,omitempty"`
+	DueDate        string `json:"dueDate,omitempty" bson:"dueDate,omitempty"`
+	CompletedAt    string `json:"completedAt,omitempty" bson:"completedAt,omitempty"`
+	CreatedAt      string `json:"createdAt" bson:"createdAt"`
+	UpdatedAt      string `json:"updatedAt" bson:"updatedAt"`
 }
 
 // Idea represents an idea or concept being explored.
 type Idea struct {
-	ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Title       string             `json:"title" bson:"title"`
-	Description string             `json:"description,omitempty" bson:"description,omitempty"`
-	Status      string             `json:"status" bson:"status"`
-	Category    string             `json:"category,omitempty" bson:"category,omitempty"`
-	Tags        []string           `json:"tags,omitempty" bson:"tags,omitempty"`
-	Research    []ResearchEntry    `json:"research,omitempty" bson:"research,omitempty"`
-	CreatedAt   time.Time          `json:"createdAt" bson:"createdAt"`
-	UpdatedAt   time.Time          `json:"updatedAt" bson:"updatedAt"`
+	ID          string          `json:"id" bson:"_id,omitempty"`
+	Title       string          `json:"title" bson:"title"`
+	Description string          `json:"description,omitempty" bson:"description,omitempty"`
+	Status      string          `json:"status" bson:"status"`
+	Category    string          `json:"category,omitempty" bson:"category,omitempty"`
+	Priority    string          `json:"priority,omitempty" bson:"priority,omitempty"`
+	Tags        []string        `json:"tags,omitempty" bson:"tags,omitempty"`
+	Research    []ResearchEntry `json:"research,omitempty" bson:"research,omitempty"`
+	ProjectID   string          `json:"projectId,omitempty" bson:"projectId,omitempty"`
+	CreatedAt   string          `json:"createdAt" bson:"createdAt"`
+	UpdatedAt   string          `json:"updatedAt" bson:"updatedAt"`
 }
 
 // ResearchEntry is a research note attached to an idea.
 type ResearchEntry struct {
-	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Content   string             `json:"content" bson:"content"`
-	Source    string             `json:"source,omitempty" bson:"source,omitempty"`
-	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`
+	Type      string `json:"type,omitempty" bson:"type,omitempty"`
+	Title     string `json:"title,omitempty" bson:"title,omitempty"`
+	Content   string `json:"content" bson:"content"`
+	Source    string `json:"source,omitempty" bson:"source,omitempty"`
+	Timestamp string `json:"timestamp,omitempty" bson:"timestamp,omitempty"`
 }
 
 // ChatSession represents a chat session with OpenClaw.
 type ChatSession struct {
-	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Key       string             `json:"key" bson:"key"`
-	Title     string             `json:"title" bson:"title"`
-	Model     string             `json:"model,omitempty" bson:"model,omitempty"`
-	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`
-	UpdatedAt time.Time          `json:"updatedAt" bson:"updatedAt"`
+	ID        string `json:"id" bson:"_id,omitempty"`
+	Key       string `json:"key" bson:"key"`
+	Title     string `json:"title" bson:"title"`
+	Model     string `json:"model,omitempty" bson:"model,omitempty"`
+	CreatedAt string `json:"createdAt" bson:"createdAt"`
+	UpdatedAt string `json:"updatedAt" bson:"updatedAt"`
 }
 
 // ChatMessage represents a message in a chat session.
@@ -111,13 +116,15 @@ type ChatMessage struct {
 
 // ActivityEntry represents an activity log entry.
 type ActivityEntry struct {
-	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Action    string             `json:"action" bson:"action"`
-	Entity    string             `json:"entity" bson:"entity"`
-	EntityID  string             `json:"entityId,omitempty" bson:"entityId,omitempty"`
-	Details   string             `json:"details,omitempty" bson:"details,omitempty"`
-	User      string             `json:"user" bson:"user"`
-	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`
+	ID         string `json:"id" bson:"_id,omitempty"`
+	InstanceID string `json:"instanceId,omitempty" bson:"instanceId,omitempty"`
+	Action     string `json:"action" bson:"action"`
+	EntityType string `json:"entityType,omitempty" bson:"entityType,omitempty"`
+	EntityID   string `json:"entityId,omitempty" bson:"entityId,omitempty"`
+	Summary    string `json:"summary,omitempty" bson:"summary,omitempty"`
+	Data       string `json:"data,omitempty" bson:"data,omitempty"`
+	Timestamp  string `json:"timestamp,omitempty" bson:"timestamp,omitempty"`
+	CreatedAt  string `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
 }
 
 // Pagination helpers

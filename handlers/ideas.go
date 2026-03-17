@@ -67,9 +67,9 @@ func CreateIdea(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Title is required", "code": 400})
 	}
 
-	idea.ID = primitive.NewObjectID()
-	idea.CreatedAt = time.Now()
-	idea.UpdatedAt = time.Now()
+	idea.ID = primitive.NewObjectID().Hex()
+	idea.CreatedAt = time.Now().Format(time.RFC3339)
+	idea.UpdatedAt = time.Now().Format(time.RFC3339)
 	if idea.Status == "" {
 		idea.Status = "new"
 	}
@@ -85,22 +85,19 @@ func CreateIdea(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create idea", "code": 500})
 	}
 
-	logActivity(c, "create", "idea", idea.ID.Hex(), "Created idea: "+idea.Title)
+	logActivity(c, "create", "idea", idea.ID, "Created idea: "+idea.Title)
 	return c.Status(201).JSON(idea)
 }
 
 // GetIdea returns a single idea with its research entries.
 func GetIdea(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	var idea models.Idea
-	err = db.Collection("ideas").FindOne(ctx, bson.M{"_id": id}).Decode(&idea)
+	err := db.Collection("ideas").FindOne(ctx, bson.M{"_id": id}).Decode(&idea)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Idea not found", "code": 404})
 	}
@@ -110,10 +107,7 @@ func GetIdea(c *fiber.Ctx) error {
 
 // UpdateIdea updates an idea by ID.
 func UpdateIdea(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	var updates bson.M
 	if err := c.BodyParser(&updates); err != nil {
@@ -123,7 +117,7 @@ func UpdateIdea(c *fiber.Ctx) error {
 	delete(updates, "_id")
 	delete(updates, "id")
 	delete(updates, "createdAt")
-	updates["updatedAt"] = time.Now()
+	updates["updatedAt"] = time.Now().Format(time.RFC3339)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -139,16 +133,13 @@ func UpdateIdea(c *fiber.Ctx) error {
 	var idea models.Idea
 	db.Collection("ideas").FindOne(ctx, bson.M{"_id": id}).Decode(&idea)
 
-	logActivity(c, "update", "idea", id.Hex(), "Updated idea")
+	logActivity(c, "update", "idea", id, "Updated idea")
 	return c.JSON(idea)
 }
 
 // DeleteIdea deletes an idea by ID.
 func DeleteIdea(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -161,16 +152,13 @@ func DeleteIdea(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Idea not found", "code": 404})
 	}
 
-	logActivity(c, "delete", "idea", id.Hex(), "Deleted idea")
+	logActivity(c, "delete", "idea", id, "Deleted idea")
 	return c.JSON(fiber.Map{"message": "Idea deleted"})
 }
 
 // AddResearch adds a research entry to an idea.
 func AddResearch(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	var entry models.ResearchEntry
 	if err := c.BodyParser(&entry); err != nil {
@@ -180,15 +168,14 @@ func AddResearch(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Content is required", "code": 400})
 	}
 
-	entry.ID = primitive.NewObjectID()
-	entry.CreatedAt = time.Now()
+	entry.Timestamp = time.Now().Format(time.RFC3339)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	result, err := db.Collection("ideas").UpdateOne(ctx, bson.M{"_id": id}, bson.M{
 		"$push": bson.M{"research": entry},
-		"$set":  bson.M{"updatedAt": time.Now()},
+		"$set":  bson.M{"updatedAt": time.Now().Format(time.RFC3339)},
 	})
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to add research", "code": 500})
@@ -197,34 +184,31 @@ func AddResearch(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Idea not found", "code": 404})
 	}
 
-	logActivity(c, "create", "research", id.Hex(), "Added research to idea")
+	logActivity(c, "create", "research", id, "Added research to idea")
 	return c.Status(201).JSON(entry)
 }
 
 // ConvertIdeaToProject converts an idea into a project.
 func ConvertIdeaToProject(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	var idea models.Idea
-	err = db.Collection("ideas").FindOne(ctx, bson.M{"_id": id}).Decode(&idea)
+	err := db.Collection("ideas").FindOne(ctx, bson.M{"_id": id}).Decode(&idea)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Idea not found", "code": 404})
 	}
 
 	project := models.Project{
-		ID:          primitive.NewObjectID(),
+		ID:          primitive.NewObjectID().Hex(),
 		Name:        idea.Title,
 		Description: idea.Description,
 		Status:      "active",
 		Tags:        idea.Tags,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		CreatedAt:   time.Now().Format(time.RFC3339),
+		UpdatedAt:   time.Now().Format(time.RFC3339),
 	}
 
 	_, err = db.Collection("projects").InsertOne(ctx, project)
@@ -234,9 +218,9 @@ func ConvertIdeaToProject(c *fiber.Ctx) error {
 
 	// Mark idea as converted
 	db.Collection("ideas").UpdateOne(ctx, bson.M{"_id": id}, bson.M{
-		"$set": bson.M{"status": "converted", "updatedAt": time.Now()},
+		"$set": bson.M{"status": "converted", "updatedAt": time.Now().Format(time.RFC3339)},
 	})
 
-	logActivity(c, "convert", "idea", id.Hex(), "Converted idea to project: "+project.Name)
+	logActivity(c, "convert", "idea", id, "Converted idea to project: "+project.Name)
 	return c.Status(201).JSON(fiber.Map{"project": project, "idea": idea})
 }

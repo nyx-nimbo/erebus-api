@@ -15,10 +15,7 @@ import (
 
 // ListTasks returns tasks for a given project.
 func ListTasks(c *fiber.Ctx) error {
-	projectID, err := primitive.ObjectIDFromHex(c.Params("projectId"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid project ID", "code": 400})
-	}
+	projectID := c.Params("projectId")
 
 	page, limit := parsePagination(c)
 	skip := int64((page - 1) * limit)
@@ -60,10 +57,7 @@ func ListTasks(c *fiber.Ctx) error {
 
 // CreateTask creates a task under a project.
 func CreateTask(c *fiber.Ctx) error {
-	projectID, err := primitive.ObjectIDFromHex(c.Params("projectId"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid project ID", "code": 400})
-	}
+	projectID := c.Params("projectId")
 
 	var task models.Task
 	if err := c.BodyParser(&task); err != nil {
@@ -73,10 +67,10 @@ func CreateTask(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Title is required", "code": 400})
 	}
 
-	task.ID = primitive.NewObjectID()
+	task.ID = primitive.NewObjectID().Hex()
 	task.ProjectID = projectID
-	task.CreatedAt = time.Now()
-	task.UpdatedAt = time.Now()
+	task.CreatedAt = time.Now().Format(time.RFC3339)
+	task.UpdatedAt = time.Now().Format(time.RFC3339)
 	if task.Status == "" {
 		task.Status = "todo"
 	}
@@ -84,27 +78,24 @@ func CreateTask(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err = db.Collection("tasks").InsertOne(ctx, task)
+	_, err := db.Collection("tasks").InsertOne(ctx, task)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create task", "code": 500})
 	}
 
-	logActivity(c, "create", "task", task.ID.Hex(), "Created task: "+task.Title)
+	logActivity(c, "create", "task", task.ID, "Created task: "+task.Title)
 	return c.Status(201).JSON(task)
 }
 
 // GetTask returns a single task by ID.
 func GetTask(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	var task models.Task
-	err = db.Collection("tasks").FindOne(ctx, bson.M{"_id": id}).Decode(&task)
+	err := db.Collection("tasks").FindOne(ctx, bson.M{"_id": id}).Decode(&task)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Task not found", "code": 404})
 	}
@@ -114,10 +105,7 @@ func GetTask(c *fiber.Ctx) error {
 
 // UpdateTask updates a task by ID.
 func UpdateTask(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	var updates bson.M
 	if err := c.BodyParser(&updates); err != nil {
@@ -128,7 +116,7 @@ func UpdateTask(c *fiber.Ctx) error {
 	delete(updates, "id")
 	delete(updates, "projectId")
 	delete(updates, "createdAt")
-	updates["updatedAt"] = time.Now()
+	updates["updatedAt"] = time.Now().Format(time.RFC3339)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -144,16 +132,13 @@ func UpdateTask(c *fiber.Ctx) error {
 	var task models.Task
 	db.Collection("tasks").FindOne(ctx, bson.M{"_id": id}).Decode(&task)
 
-	logActivity(c, "update", "task", id.Hex(), "Updated task")
+	logActivity(c, "update", "task", id, "Updated task")
 	return c.JSON(task)
 }
 
 // DeleteTask deletes a task by ID.
 func DeleteTask(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -166,16 +151,13 @@ func DeleteTask(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Task not found", "code": 404})
 	}
 
-	logActivity(c, "delete", "task", id.Hex(), "Deleted task")
+	logActivity(c, "delete", "task", id, "Deleted task")
 	return c.JSON(fiber.Map{"message": "Task deleted"})
 }
 
 // ClaimTask assigns the current user to a task.
 func ClaimTask(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	email, _ := c.Locals("email").(string)
 
@@ -186,7 +168,7 @@ func ClaimTask(c *fiber.Ctx) error {
 		"$set": bson.M{
 			"claimedBy": email,
 			"status":    "in_progress",
-			"updatedAt": time.Now(),
+			"updatedAt": time.Now().Format(time.RFC3339),
 		},
 	})
 	if err != nil {
@@ -199,7 +181,7 @@ func ClaimTask(c *fiber.Ctx) error {
 	var task models.Task
 	db.Collection("tasks").FindOne(ctx, bson.M{"_id": id}).Decode(&task)
 
-	logActivity(c, "claim", "task", id.Hex(), "Claimed task")
+	logActivity(c, "claim", "task", id, "Claimed task")
 	return c.JSON(task)
 }
 
@@ -216,10 +198,7 @@ func ListAllTasks(c *fiber.Ctx) error {
 
 	// Optional projectId filter
 	if pid := c.Query("projectId"); pid != "" {
-		oid, err := primitive.ObjectIDFromHex(pid)
-		if err == nil {
-			filter["projectId"] = oid
-		}
+		filter["projectId"] = pid
 	}
 
 	total, err := coll.CountDocuments(ctx, filter)
@@ -262,9 +241,9 @@ func CreateTaskFlat(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	task.ID = primitive.NewObjectID()
-	task.CreatedAt = time.Now()
-	task.UpdatedAt = time.Now()
+	task.ID = primitive.NewObjectID().Hex()
+	task.CreatedAt = time.Now().Format(time.RFC3339)
+	task.UpdatedAt = time.Now().Format(time.RFC3339)
 	if task.Status == "" {
 		task.Status = "todo"
 	}

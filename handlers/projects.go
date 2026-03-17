@@ -22,7 +22,18 @@ func ListProjects(c *fiber.Ctx) error {
 	defer cancel()
 
 	coll := db.Collection("projects")
-	filter := bson.M{"parentId": nil}
+	filter := bson.M{}
+
+	// Optional: filter by parentId query param
+	if pid := c.Query("parentId"); pid != "" {
+		filter["parentId"] = pid
+	} else if c.Query("topLevel") == "true" {
+		filter["$or"] = []bson.M{
+			{"parentId": nil},
+			{"parentId": ""},
+			{"parentId": bson.M{"$exists": false}},
+		}
+	}
 
 	total, err := coll.CountDocuments(ctx, filter)
 	if err != nil {
@@ -63,9 +74,9 @@ func CreateProject(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Name is required", "code": 400})
 	}
 
-	project.ID = primitive.NewObjectID()
-	project.CreatedAt = time.Now()
-	project.UpdatedAt = time.Now()
+	project.ID = primitive.NewObjectID().Hex()
+	project.CreatedAt = time.Now().Format(time.RFC3339)
+	project.UpdatedAt = time.Now().Format(time.RFC3339)
 	if project.Status == "" {
 		project.Status = "active"
 	}
@@ -78,22 +89,19 @@ func CreateProject(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create project", "code": 500})
 	}
 
-	logActivity(c, "create", "project", project.ID.Hex(), "Created project: "+project.Name)
+	logActivity(c, "create", "project", project.ID, "Created project: "+project.Name)
 	return c.Status(201).JSON(project)
 }
 
 // GetProject returns a project with its sub-projects.
 func GetProject(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	var project models.Project
-	err = db.Collection("projects").FindOne(ctx, bson.M{"_id": id}).Decode(&project)
+	err := db.Collection("projects").FindOne(ctx, bson.M{"_id": id}).Decode(&project)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Project not found", "code": 404})
 	}
@@ -117,10 +125,7 @@ func GetProject(c *fiber.Ctx) error {
 
 // UpdateProject updates a project by ID.
 func UpdateProject(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	var updates bson.M
 	if err := c.BodyParser(&updates); err != nil {
@@ -130,7 +135,7 @@ func UpdateProject(c *fiber.Ctx) error {
 	delete(updates, "_id")
 	delete(updates, "id")
 	delete(updates, "createdAt")
-	updates["updatedAt"] = time.Now()
+	updates["updatedAt"] = time.Now().Format(time.RFC3339)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -146,16 +151,13 @@ func UpdateProject(c *fiber.Ctx) error {
 	var project models.Project
 	db.Collection("projects").FindOne(ctx, bson.M{"_id": id}).Decode(&project)
 
-	logActivity(c, "update", "project", id.Hex(), "Updated project")
+	logActivity(c, "update", "project", id, "Updated project")
 	return c.JSON(project)
 }
 
 // DeleteProject deletes a project and its sub-projects and tasks.
 func DeleteProject(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -172,22 +174,19 @@ func DeleteProject(c *fiber.Ctx) error {
 	db.Collection("projects").DeleteMany(ctx, bson.M{"parentId": id})
 	db.Collection("tasks").DeleteMany(ctx, bson.M{"projectId": id})
 
-	logActivity(c, "delete", "project", id.Hex(), "Deleted project")
+	logActivity(c, "delete", "project", id, "Deleted project")
 	return c.JSON(fiber.Map{"message": "Project deleted"})
 }
 
 // ConvertToGroup converts a project into a group.
 func ConvertToGroup(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	result, err := db.Collection("projects").UpdateOne(ctx, bson.M{"_id": id}, bson.M{
-		"$set": bson.M{"isGroup": true, "updatedAt": time.Now()},
+		"$set": bson.M{"isGroup": true, "updatedAt": time.Now().Format(time.RFC3339)},
 	})
 	if err != nil || result.MatchedCount == 0 {
 		return c.Status(404).JSON(fiber.Map{"error": "Project not found", "code": 404})
@@ -196,33 +195,27 @@ func ConvertToGroup(c *fiber.Ctx) error {
 	var project models.Project
 	db.Collection("projects").FindOne(ctx, bson.M{"_id": id}).Decode(&project)
 
-	logActivity(c, "update", "project", id.Hex(), "Converted to group")
+	logActivity(c, "update", "project", id, "Converted to group")
 	return c.JSON(project)
 }
 
 // MoveToGroup moves a project under a group.
 func MoveToGroup(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid project ID", "code": 400})
-	}
-	groupID, err := primitive.ObjectIDFromHex(c.Params("groupId"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid group ID", "code": 400})
-	}
+	id := c.Params("id")
+	groupID := c.Params("groupId")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	// Verify group exists and is a group
 	var group models.Project
-	err = db.Collection("projects").FindOne(ctx, bson.M{"_id": groupID}).Decode(&group)
+	err := db.Collection("projects").FindOne(ctx, bson.M{"_id": groupID}).Decode(&group)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Group not found", "code": 404})
 	}
 
 	result, err := db.Collection("projects").UpdateOne(ctx, bson.M{"_id": id}, bson.M{
-		"$set": bson.M{"parentId": groupID, "updatedAt": time.Now()},
+		"$set": bson.M{"parentId": groupID, "updatedAt": time.Now().Format(time.RFC3339)},
 	})
 	if err != nil || result.MatchedCount == 0 {
 		return c.Status(404).JSON(fiber.Map{"error": "Project not found", "code": 404})
@@ -231,22 +224,19 @@ func MoveToGroup(c *fiber.Ctx) error {
 	var project models.Project
 	db.Collection("projects").FindOne(ctx, bson.M{"_id": id}).Decode(&project)
 
-	logActivity(c, "update", "project", id.Hex(), "Moved to group: "+group.Name)
+	logActivity(c, "update", "project", id, "Moved to group: "+group.Name)
 	return c.JSON(project)
 }
 
 // MakeStandalone removes a project from its parent group.
 func MakeStandalone(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	result, err := db.Collection("projects").UpdateOne(ctx, bson.M{"_id": id}, bson.M{
-		"$set":   bson.M{"updatedAt": time.Now()},
+		"$set":   bson.M{"updatedAt": time.Now().Format(time.RFC3339)},
 		"$unset": bson.M{"parentId": ""},
 	})
 	if err != nil || result.MatchedCount == 0 {
@@ -256,16 +246,13 @@ func MakeStandalone(c *fiber.Ctx) error {
 	var project models.Project
 	db.Collection("projects").FindOne(ctx, bson.M{"_id": id}).Decode(&project)
 
-	logActivity(c, "update", "project", id.Hex(), "Made standalone")
+	logActivity(c, "update", "project", id, "Made standalone")
 	return c.JSON(project)
 }
 
 // ListSubProjects returns sub-projects for a parent project.
 func ListSubProjects(c *fiber.Ctx) error {
-	id, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
-	}
+	id := c.Params("id")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

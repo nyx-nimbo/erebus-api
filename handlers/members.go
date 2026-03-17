@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/nyx-nimbo/erebus-api/db"
 	"github.com/nyx-nimbo/erebus-api/models"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // ListUsers returns all users from the users collection.
@@ -134,8 +136,13 @@ func ListMembers(c *fiber.Ctx) error {
 
 func getStringField(doc bson.M, key string) string {
 	if v, ok := doc[key]; ok {
-		if s, ok := v.(string); ok {
-			return s
+		switch val := v.(type) {
+		case string:
+			return val
+		case primitive.ObjectID:
+			return val.Hex()
+		default:
+			return fmt.Sprintf("%v", val)
 		}
 	}
 	return ""

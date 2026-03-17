@@ -145,6 +145,40 @@ type PaginatedResponse struct {
 	TotalPages int64       `json:"totalPages"`
 }
 
+// Message represents an internal message between users/agents.
+type Message struct {
+	ID        string `json:"id" bson:"_id,omitempty"`
+	FromID    string `json:"fromId" bson:"fromId"`
+	FromName  string `json:"fromName" bson:"fromName"`
+	FromType  string `json:"fromType" bson:"fromType"`
+	ToID      string `json:"toId" bson:"toId"`
+	ToName    string `json:"toName" bson:"toName"`
+	Content   string `json:"content" bson:"content"`
+	Read      bool   `json:"read" bson:"read"`
+	CreatedAt string `json:"createdAt" bson:"createdAt"`
+}
+
+// Member represents a unified user or agent entry.
+type Member struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Email    string `json:"email,omitempty"`
+	Type     string `json:"type"`
+	Status   string `json:"status"`
+	LastSeen string `json:"lastSeen,omitempty"`
+	Picture  string `json:"picture,omitempty"`
+}
+
+// Conversation represents a message thread summary.
+type Conversation struct {
+	MemberID      string  `json:"memberId"`
+	MemberName    string  `json:"memberName"`
+	MemberType    string  `json:"memberType"`
+	LastMessage   string  `json:"lastMessage"`
+	LastMessageAt string  `json:"lastMessageAt"`
+	UnreadCount   int     `json:"unreadCount"`
+}
+
 // Error response
 
 type ErrorResponse struct {

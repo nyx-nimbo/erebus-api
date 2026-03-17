@@ -114,6 +114,18 @@ func main() {
 	api.Get("/calendar/upcoming", handlers.UpcomingEvents)
 	api.Post("/calendar/events", handlers.CreateEvent)
 
+	// Members
+	api.Get("/users", handlers.ListUsers)
+	api.Get("/agents", handlers.ListAgents)
+	api.Get("/members", handlers.ListMembers)
+
+	// Messages
+	api.Post("/messages", handlers.SendMessage)
+	api.Get("/messages", handlers.GetConversation)
+	api.Get("/messages/conversations", handlers.ListConversations)
+	api.Get("/messages/unread", handlers.GetUnreadCount)
+	api.Put("/messages/:id/read", handlers.MarkRead)
+
 	// Hivemind
 	api.Get("/activity", handlers.GetActivity)
 	api.Post("/knowledge/search", handlers.KnowledgeSearch)

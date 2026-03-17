@@ -32,6 +32,7 @@ func InitOAuth(clientID, clientSecret string) {
 
 type googleLoginRequest struct {
 	Code        string `json:"code"`
+	Credential  string `json:"credential"`
 	RedirectURI string `json:"redirectUri"`
 }
 
@@ -69,23 +70,35 @@ func GoogleLogin(jwtSecret string) fiber.Handler {
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid request body", "code": 400})
 		}
-		if req.Code == "" {
-			return c.Status(400).JSON(fiber.Map{"error": "Authorization code required", "code": 400})
-		}
 
-		cfg := *oauthConfig
-		if req.RedirectURI != "" {
-			cfg.RedirectURL = req.RedirectURI
-		}
+		var userInfo *googleUserInfo
 
-		token, err := cfg.Exchange(context.Background(), req.Code)
-		if err != nil {
-			return c.Status(401).JSON(fiber.Map{"error": "Failed to exchange code: " + err.Error(), "code": 401})
-		}
+		if req.Credential != "" {
+			// Google Identity Services (One Tap / Sign-In button) sends a JWT credential
+			info, err := verifyGoogleCredential(req.Credential)
+			if err != nil {
+				return c.Status(401).JSON(fiber.Map{"error": "Invalid credential: " + err.Error(), "code": 401})
+			}
+			userInfo = info
+		} else if req.Code != "" {
+			// Traditional OAuth2 authorization code flow
+			cfg := *oauthConfig
+			if req.RedirectURI != "" {
+				cfg.RedirectURL = req.RedirectURI
+			}
 
-		userInfo, err := fetchGoogleUser(token.AccessToken)
-		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch user info", "code": 500})
+			token, err := cfg.Exchange(context.Background(), req.Code)
+			if err != nil {
+				return c.Status(401).JSON(fiber.Map{"error": "Failed to exchange code: " + err.Error(), "code": 401})
+			}
+
+			info, err := fetchGoogleUser(token.AccessToken)
+			if err != nil {
+				return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch user info", "code": 500})
+			}
+			userInfo = info
+		} else {
+			return c.Status(400).JSON(fiber.Map{"error": "Authorization code or credential required", "code": 400})
 		}
 
 		upsertUser(userInfo)
@@ -128,6 +141,48 @@ func RefreshToken(jwtSecret string) fiber.Handler {
 		}
 		return c.JSON(fiber.Map{"token": token})
 	}
+}
+
+// verifyGoogleCredential validates a Google Identity Services JWT credential
+// and extracts user info from it.
+func verifyGoogleCredential(credential string) (*googleUserInfo, error) {
+	// Verify the JWT by fetching Google's token info endpoint
+	resp, err := http.Get("https://oauth2.googleapis.com/tokeninfo?id_token=" + credential)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fiber.NewError(401, "Google token verification failed: "+string(body))
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var claims struct {
+		Email   string `json:"email"`
+		Name    string `json:"name"`
+		Picture string `json:"picture"`
+		Aud     string `json:"aud"`
+	}
+	if err := json.Unmarshal(body, &claims); err != nil {
+		return nil, err
+	}
+
+	// Verify audience matches our client ID
+	if oauthConfig != nil && claims.Aud != oauthConfig.ClientID {
+		return nil, fiber.NewError(401, "Token audience mismatch")
+	}
+
+	return &googleUserInfo{
+		Email:   claims.Email,
+		Name:    claims.Name,
+		Picture: claims.Picture,
+	}, nil
 }
 
 func fetchGoogleUser(accessToken string) (*googleUserInfo, error) {

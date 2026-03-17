@@ -47,12 +47,18 @@ func ListProjects(c *fiber.Ctx) error {
 	}
 	defer cursor.Close(ctx)
 
-	var projects []models.Project
+	var projects []bson.M
 	if err := cursor.All(ctx, &projects); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to decode projects", "code": 500})
 	}
 	if projects == nil {
-		projects = []models.Project{}
+		projects = []bson.M{}
+	}
+	// Normalize _id to id for JSON response
+	for i := range projects {
+		if id, ok := projects[i]["_id"]; ok {
+			projects[i]["id"] = id
+		}
 	}
 
 	return c.JSON(models.PaginatedResponse{

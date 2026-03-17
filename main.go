@@ -53,6 +53,10 @@ func main() {
 	// Auth
 	api.Get("/auth/me", handlers.GetMe)
 	api.Post("/auth/refresh", handlers.RefreshToken(cfg.JWTSecret))
+	api.Post("/auth/google/connect", handlers.GoogleConnectURL)
+	api.Post("/auth/google/callback", handlers.GoogleCallback)
+	api.Get("/auth/google/status", handlers.GoogleConnectionStatus)
+	api.Post("/auth/google/disconnect", handlers.GoogleDisconnect)
 
 	// Clients
 	api.Get("/clients", handlers.ListClients)

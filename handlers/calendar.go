@@ -18,7 +18,12 @@ const calendarAPIBase = "https://www.googleapis.com/calendar/v3/calendars/primar
 func TodayEvents(c *fiber.Ctx) error {
 	token := c.Get("X-Google-Token")
 	if token == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "X-Google-Token header required", "code": 400})
+		email, _ := c.Locals("email").(string)
+		stored, err := GetUserGoogleToken(email)
+		if err != nil {
+			return c.Status(403).JSON(fiber.Map{"error": "Google services not connected. Please connect in Settings.", "code": 403, "needsConnect": true})
+		}
+		token = stored
 	}
 
 	now := time.Now()
@@ -43,7 +48,12 @@ func TodayEvents(c *fiber.Ctx) error {
 func UpcomingEvents(c *fiber.Ctx) error {
 	token := c.Get("X-Google-Token")
 	if token == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "X-Google-Token header required", "code": 400})
+		email, _ := c.Locals("email").(string)
+		stored, err := GetUserGoogleToken(email)
+		if err != nil {
+			return c.Status(403).JSON(fiber.Map{"error": "Google services not connected", "code": 403, "needsConnect": true})
+		}
+		token = stored
 	}
 
 	days, _ := strconv.Atoi(c.Query("days", "7"))
@@ -72,7 +82,12 @@ func UpcomingEvents(c *fiber.Ctx) error {
 func CreateEvent(c *fiber.Ctx) error {
 	token := c.Get("X-Google-Token")
 	if token == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "X-Google-Token header required", "code": 400})
+		email, _ := c.Locals("email").(string)
+		stored, err := GetUserGoogleToken(email)
+		if err != nil {
+			return c.Status(403).JSON(fiber.Map{"error": "Google services not connected", "code": 403, "needsConnect": true})
+		}
+		token = stored
 	}
 
 	var event map[string]interface{}

@@ -17,7 +17,13 @@ const gmailAPIBase = "https://gmail.googleapis.com/gmail/v1/users/me"
 func ListEmails(c *fiber.Ctx) error {
 	token := c.Get("X-Google-Token")
 	if token == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "X-Google-Token header required for Gmail access", "code": 400})
+		// Try to get token from stored user credentials
+		email, _ := c.Locals("email").(string)
+		stored, err := GetUserGoogleToken(email)
+		if err != nil {
+			return c.Status(403).JSON(fiber.Map{"error": "Google services not connected. Please connect in Settings.", "code": 403, "needsConnect": true})
+		}
+		token = stored
 	}
 
 	maxResults := c.Query("maxResults", "20")
@@ -40,7 +46,12 @@ func ListEmails(c *fiber.Ctx) error {
 func ReadEmail(c *fiber.Ctx) error {
 	token := c.Get("X-Google-Token")
 	if token == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "X-Google-Token header required", "code": 400})
+		email, _ := c.Locals("email").(string)
+		stored, err := GetUserGoogleToken(email)
+		if err != nil {
+			return c.Status(403).JSON(fiber.Map{"error": "Google services not connected", "code": 403, "needsConnect": true})
+		}
+		token = stored
 	}
 
 	emailID := c.Params("id")
@@ -58,7 +69,12 @@ func ReadEmail(c *fiber.Ctx) error {
 func SendEmail(c *fiber.Ctx) error {
 	token := c.Get("X-Google-Token")
 	if token == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "X-Google-Token header required", "code": 400})
+		email, _ := c.Locals("email").(string)
+		stored, err := GetUserGoogleToken(email)
+		if err != nil {
+			return c.Status(403).JSON(fiber.Map{"error": "Google services not connected", "code": 403, "needsConnect": true})
+		}
+		token = stored
 	}
 
 	var body map[string]interface{}

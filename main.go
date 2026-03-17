@@ -81,6 +81,7 @@ func main() {
 	// Tasks
 	api.Get("/tasks", handlers.ListAllTasks)
 	api.Post("/tasks", handlers.CreateTaskFlat)
+	api.Get("/tasks/:id", handlers.GetTask)
 	api.Get("/projects/:projectId/tasks", handlers.ListTasks)
 	api.Post("/projects/:projectId/tasks", handlers.CreateTask)
 	api.Put("/tasks/:id", handlers.UpdateTask)
@@ -99,6 +100,7 @@ func main() {
 	// Chat
 	api.Post("/chat/send", handlers.SendChat)
 	api.Get("/chat/sessions", handlers.ListChatSessions)
+	api.Get("/chat/sessions/:key", handlers.GetChatSession)
 	api.Post("/chat/sessions", handlers.CreateChatSession)
 	api.Delete("/chat/sessions/:key", handlers.DeleteChatSession)
 

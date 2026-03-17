@@ -140,6 +140,22 @@ func CreateChatSession(c *fiber.Ctx) error {
 	return c.Status(201).JSON(session)
 }
 
+// GetChatSession returns a single chat session by key.
+func GetChatSession(c *fiber.Ctx) error {
+	key := c.Params("key")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var session models.ChatSession
+	err := db.Collection("chat_sessions").FindOne(ctx, bson.M{"key": key}).Decode(&session)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Session not found", "code": 404})
+	}
+
+	return c.JSON(session)
+}
+
 // DeleteChatSession deletes a chat session by key.
 func DeleteChatSession(c *fiber.Ctx) error {
 	key := c.Params("key")

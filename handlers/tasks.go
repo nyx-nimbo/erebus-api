@@ -93,6 +93,25 @@ func CreateTask(c *fiber.Ctx) error {
 	return c.Status(201).JSON(task)
 }
 
+// GetTask returns a single task by ID.
+func GetTask(c *fiber.Ctx) error {
+	id, err := primitive.ObjectIDFromHex(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid ID", "code": 400})
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var task models.Task
+	err = db.Collection("tasks").FindOne(ctx, bson.M{"_id": id}).Decode(&task)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Task not found", "code": 404})
+	}
+
+	return c.JSON(task)
+}
+
 // UpdateTask updates a task by ID.
 func UpdateTask(c *fiber.Ctx) error {
 	id, err := primitive.ObjectIDFromHex(c.Params("id"))

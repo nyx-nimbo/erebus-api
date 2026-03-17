@@ -71,7 +71,7 @@ func CreateIdea(c *fiber.Ctx) error {
 	idea.CreatedAt = time.Now()
 	idea.UpdatedAt = time.Now()
 	if idea.Status == "" {
-		idea.Status = "draft"
+		idea.Status = "new"
 	}
 	if idea.Research == nil {
 		idea.Research = []models.ResearchEntry{}

@@ -1,0 +1,33 @@
+# Binaries
+erebus-api
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Environment
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+*.test
+*.out
+coverage.txt
+
+# Vendor (if not committed)
+# vendor/
+
+# Build
+/bin/
+/dist/

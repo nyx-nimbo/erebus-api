@@ -105,9 +105,14 @@ func ListMembers(c *fiber.Ctx) error {
 						status = s
 					}
 				}
+				agentID := getStringField(a, "agentId")
+				if agentID == "" {
+					agentID = getStringField(a, "_id")
+				}
 				m := models.Member{
-					ID:     getStringField(a, "_id"),
+					ID:     agentID,
 					Name:   getStringField(a, "name"),
+					Email:  getStringField(a, "email"),
 					Type:   "agent",
 					Status: status,
 				}

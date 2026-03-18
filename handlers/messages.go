@@ -1,10 +1,17 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
+	"log"
+	"net/http"
+	"os"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/nyx-nimbo/erebus-api/db"
 	"github.com/nyx-nimbo/erebus-api/models"
 	"go.mongodb.org/mongo-driver/bson"
@@ -50,6 +57,9 @@ func SendMessage(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to send message", "code": 500})
 	}
+
+	// Forward to WebSocket server for real-time delivery
+	go forwardToWS(msg)
 
 	return c.Status(201).JSON(msg)
 }
@@ -217,4 +227,56 @@ func resolveRecipientName(id string) string {
 	}
 
 	return id
+}
+
+// forwardToWS sends a message to the WebSocket server for real-time delivery
+func forwardToWS(msg models.Message) {
+	wsURL := os.Getenv("EREBUS_WS_URL")
+	if wsURL == "" {
+		wsURL = "https://ws-erebus.nimbo.pro"
+	}
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "erebus-jwt-secret-v1-change-me"
+	}
+
+	// Generate a service JWT
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"email": msg.FromID,
+		"name":  msg.FromName,
+		"exp":   time.Now().Add(5 * time.Minute).Unix(),
+		"iat":   time.Now().Unix(),
+	})
+	tokenStr, err := token.SignedString([]byte(jwtSecret))
+	if err != nil {
+		log.Printf("WS forward: JWT error: %v", err)
+		return
+	}
+
+	payload := map[string]string{
+		"toId":    msg.ToID,
+		"content": msg.Content,
+	}
+	body, _ := json.Marshal(payload)
+
+	req, err := http.NewRequest("POST", wsURL+"/api/send", bytes.NewReader(body))
+	if err != nil {
+		log.Printf("WS forward: request error: %v", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+tokenStr)
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("WS forward: send error: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		respBody, _ := io.ReadAll(resp.Body)
+		log.Printf("WS forward: status %d: %s", resp.StatusCode, string(respBody))
+	}
 }

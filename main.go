@@ -129,6 +129,7 @@ func main() {
 	api.Get("/messages/conversations", handlers.ListConversations)
 	api.Get("/messages/unread", handlers.GetUnreadCount)
 	api.Put("/messages/:id/read", handlers.MarkRead)
+	api.Delete("/messages/conversation", handlers.DeleteConversation)
 
 	// Hivemind
 	api.Get("/activity", handlers.GetActivity)

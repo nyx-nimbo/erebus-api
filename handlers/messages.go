@@ -203,6 +203,33 @@ func GetUnreadCount(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"count": count})
 }
 
+// DeleteConversation deletes all messages between the current user and another user/agent.
+func DeleteConversation(c *fiber.Ctx) error {
+	withID := c.Query("with")
+	if withID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "with parameter is required", "code": 400})
+	}
+
+	currentUser, _ := c.Locals("email").(string)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{
+		"$or": []bson.M{
+			{"fromId": currentUser, "toId": withID},
+			{"fromId": withID, "toId": currentUser},
+		},
+	}
+
+	result, err := db.Collection("messages").DeleteMany(ctx, filter)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete conversation", "code": 500})
+	}
+
+	return c.JSON(fiber.Map{"deleted": result.DeletedCount})
+}
+
 // resolveRecipientName looks up the name of a recipient by their ID (email for users, _id for agents).
 func resolveRecipientName(id string) string {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
